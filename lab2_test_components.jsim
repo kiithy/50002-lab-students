@@ -1,4 +1,4 @@
-.include "lab2adder4checkoff.jsim"
+.include "8clocks.jsim"
 .include "nominal.jsim"
 
 * 2-input nand: inputs are a and b, output is z
@@ -35,7 +35,7 @@ MPU1 z c 2 vdd PENH sw=4 sl=1
 MPU2 2 a vdd vdd PENH sw =4 sl=1
 
 MPD3 z c 0 0 NENH sw=2 sl=1
-MPU3 2 b vdd vdd PENH sw=4 sl=1 
+MPU3 2 b vdd vdd PENH sw=4 sl= 1 
 
 *END ANSWER
 .ends
@@ -59,40 +59,10 @@ MPU3 2 b vdd vdd PENH sw=4 sl=1
 .ends
 
 
-* FA: 1-bit Full Adder circuit
-* Input: a, b, ci 
-* Output: s, co
-.subckt FA a b ci s co
-* write your FA circuitry here
-* BEGIN ANSWER
+* test the XOR gate
+Xtestxor clk1 clk2 xorout xor2
 
-Xxorgate1 a b xorgate1_out xor2
-Xxorgate2 xorgate1_out ci s xor2
-
-Xnandgate1 a b nandgate1_out nand2
-Xinvnandgate1  nandgate1_out a_and_b inv
-
-Xandgate2 a ci nandgate2_out nand2
-Xinvandgate2 nandgate2_out a_and_ci inv
-
-Xandgate3 b ci nandgate3_out nand2
-Xinvandgat3 nandgate3_out b_and_ci inv
-
-Xnorgate1 a_and_b a_and_ci norgate1_out nor2
-Xinvnorgate1 norgate1_out or_out_1 inv
-
-Xnorgate2 or_out_1 b_and_ci norgate2_out nor2
-Xinvnorgate2 norgate2_out co inv
-
-
-*END ANSWER
-.ends
-
-
-.subckt ADDER4 a3 a2 a1 a0 b3 b2 b1 b0 s4 s3 s2 s1 s0
-Xbit0 a0 b0 0 s0 c0 FA
-Xbit1 a1 b1 c0 s1 c1 FA
-Xbit2 a2 b2 c1 s2 c2 FA
-Xbit3 a3 b3 c2 s3 s4 FA
-.ends
-
+.tran 40ns
+.plot L(clk1)
+.plot L(clk2)
+.plot L(xorout)

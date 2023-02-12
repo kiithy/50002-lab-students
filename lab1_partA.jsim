@@ -1,0 +1,11 @@
+* plot Ids vs. Vds for 5 different Vgs values
+.include "nominal.jsim"
+Vmeter vds drain 0v //Voltmeter (Vmeter) connected to Vds(vds) and Drain(drain)
+// '0' means ground source 
+Vds vds 0 0v // 'vds' variable is the same as above and are string matched
+Vgs gate 0 0v 
+
+* N-channel MOSFET used for our test
+M1 drain gate 0 0 NENH W=1.2u L=600n
+.dc Vds 0 5 .1 Vgs 0 5 1
+.plot I(Vmeter)
