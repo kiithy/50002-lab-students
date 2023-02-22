@@ -18,6 +18,15 @@
 * Replace the gates using stdcell gates instead of your custom gates
 * BEGIN ANSWER
 
+** S bit **
+Xxor1 a b xor1_out xor2
+Xxor2 xor1_out cin s xor2
+
+** Cout bit **
+Xc1 a b co1 nand2
+Xc2 a cin co2 nand2
+Xc3 b cin co3 nand2
+Xc4 co1 co2 co3 co nand3
 
 * END ANSWER
 .ends
@@ -25,8 +34,50 @@
 **********************************
 **** Adder32 circuit *************
 .subckt adder32 ALUFN[0] a[31:0] b[31:0] s[31:0] z v n
+** 1 + 32 + 32 + 32 + 1 + 1 + 1 **
 * BEGIN ANSWER
+** Circuit to produce XB **
+Xb b[31:0] AlUFN0#32 xb[31:0] xor2
 
+** Circuit for 32-bit RCA **
+Xbit0 a0 xb0 ALUFN0 s0 c0 FA
+Xbit_the_rest a[31:1] xb[31:1] c[30:0] s[31:1] c[31:1] FA
+
+
+* Xbit_the_rest1 a1 xb1 c0 s1 c0 FA
+* Xbit_the_rest2 a2 xb2 c0 s2 c1 FA
+* Xbit_the_rest3 a3 xb3 c0 s3 c2 FA
+* ...
+* Xbit_the_rest31 a31 xb31 c30 s31 c31 FA
+
+** Circuit for Z**
+Xz0 s[3:0] z0 or4
+Xz1 s[7:4] z1 or4
+Xz2 s[11:8] z2 or4
+Xz3 s[15:12] z3 or4
+Xz4 s[19:16] z4 or4
+Xz5 s[23:20] z5 or4
+Xz6 s[27:24] z6 or4
+Xz7 s[31:28] z7 or4
+
+Xz8 z[3:0] z00 or4
+Xz9 z[7:4] z11 or4
+Xz10 z00 z11 z nor2
+
+** Circuit for V **
+** Inverters **
+Xinva31 a31 na31 inverter
+Xinvb31 xb31 nxb31 inverter
+Xinvs31 s31 ns31 inverter
+********
+Xv_firsterm a31 xb31 ns31 v_firsterm and3 
+Xv_secondterm na31 nxb31 s31 v_secondterm and3
+
+Xv_out v_firsterm v_secondterm v or2
+********
+
+** Circuit for N **
+Xbuf s31 n buffer
 
 * END ANSWER
 .ends
@@ -37,7 +88,19 @@
 **** Compare32 circuit ***********
 .subckt compare32 ALUFN[2:1] z v n cmp[31:0]
 * BEGIN ANSWER
+.connect cmp[31:1] 0
 
+Xnv n v nxorv xor2
+Xznv nxorv z z_or_nxorv or2
+
+* s0 -- ALUFN1
+* s1 -- ALUFN2
+
+* do -- 00 -- does not matter (set it as ground)
+* d1 -- 10  -- alufn is 1, alufn is 0
+* d2 -- 01 -- alufn1 is 0, alufn2 is 1 -- set it to nxorv
+
+Xcmp_out ALUFN1 ALUFN2 0 z nxorv z_or_nxorv cmp0 mux4
 
 * END ANSWER
 .ends
@@ -47,6 +110,19 @@
 **** Boolean32 circuit ***********
 .subckt boole32 ALUFN[3:0] A[31:0] B[31:0] boole[31:0]
 * BEGIN ANSWER
+* A is s0
+* B is s1
+* d0 us when AB 00
+* d1 is when AB 10
+
+* use [x:y] when each value inside could be different
+* smth#32 is when we have 32 identical inputs of 'smth'
+Xboole A[31:0] B[31:0] ALUFN0#32 ALUFN1#32 ALUFN2#32 ALUFN3#32 boole[31:0] mux4  
+
+
+
+** Answer is only at cmp0 (LSB) **
+** Ignnore higher bits of cmp by conneting it to ground ** 
 
 
 * END ANSWER
@@ -58,6 +134,44 @@
 .subckt shift32 ALUFN[1:0] A[31:0] B[4:0] shift[31:0]
 * BEGIN ANSWER
 
+** Circuit 16 bits for shift left**
+Xw1 B4#16 A[31:16] A[15:0] w[31:16] mux2
+Xw2 B4#16 A[15:0] 0#16 w[15:0] mux2
+
+** circuit for 8 bit shift left**
+Xx1 B3#24 w[31:8] w[23:0] x[31:8] mux2
+Xx2 B3#8 w[7:0] 0#8 x[7:0]  mux2
+
+** 4 bits shift left**
+Xy1 B2#28 x[31:4] x[27:0] y[31:4] mux2
+Xy2 B2#4 x[3:0] 0#4 y[3:0] mux2
+
+** 2 bits shift left**
+Xz1 B1#30 y[31:2] y[29:0] z[31:2] mux2
+xz2 B1#2 y[1:0] 0#2 z[1:0] mux2
+
+** 1 bit shift left**
+Xshl1 B0#31 z[31:1] z[30:0] sl[31:1] mux2
+Xshl2 B0 z0 0 sl0 mux2  
+
+** shift right unit**
+** choose whether we pad within 0 or A31(MSB of A) **
+Xmsb ALUFN1 0 A31 bitin mux2
+
+** 16 bits shift right**
+Xwr B4#32 A[31:0] bitin#16 A[31:16] wr[31:0] mux2
+
+Xxr B3#32 wr[31:0] bitin#8 wr[31:8] xr[31:0] mux2
+
+Xyr B2#32 xr[31:0] bitin#4 xr[31:4] yr[31:0] mux2
+
+Xzr B1#32 yr[31:0] bitin#2 yr[31:2] zr[31:0] mux2
+ 
+** 1 bit shift right**
+Xshr B0#32 zr[31:0] bitin zr[31:1] sr[31:0] mux2
+
+** choose between the output of the SHL or the SHR **
+Xshift ALUFN0#32 sl[31:0] sr[31:0] shift[31:0] mux2
 
 * END ANSWER
 .ends
@@ -67,6 +181,19 @@
 **** ALU32 circuit ***************
 .subckt alu ALUFN[5:0] A[31:0] B[31:0] alu[31:0] z v n
 * BEGIN ANSWER
+Xadd ALUFN0 A[31:0] B[31:0] s[31:0] z v n adder32
+Xmult A[31:0] B[31:0] m[31:0] mult32
+
+** choose between output of adder or output of multiplier **
+Xarith ALUFN1#32 s[31:0] m[31:0] arith[31:0] mux2
+
+** instantiate other units **
+Xboole ALUFN[3:0] A[31:0] B[31:0] boole[31:0] boole32
+Xshift ALUFN[1:0] A[31:0] B[4:0] shift[31:0] shift32
+Xcmp ALUFN[2:1] z v n cmp[31:0] compare32
+
+** final ALU mix **
+Xalu ALUFN4#32 ALUFN5#32 arith[31:0] boole[31:0] shift[31:0] cmp[31:0] alu[31:0] mux4
 
 
 * END ANSWER
